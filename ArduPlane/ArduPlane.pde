@@ -59,25 +59,25 @@ version 2.1 of the License, or (at your option) any later version.
 #include "GCS.h"
 
 ////////////////////////////////////////////////////////////////////////////////
-// Serial ports
+// Serial ports 串口
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Note that FastSerial port buffers are allocated at ::begin time,
 // so there is not much of a penalty to defining ports that we don't
 // use.
 //
-FastSerialPort0(Serial);        // FTDI/console
-FastSerialPort1(Serial1);       // GPS port
-FastSerialPort3(Serial3);       // Telemetry port
+FastSerialPort0(Serial);        // FTDI/console 用于USB串口终端
+FastSerialPort1(Serial1);       // GPS port 用于GPS
+FastSerialPort3(Serial3);       // Telemetry port 用于XBee远程遥测
 
 ////////////////////////////////////////////////////////////////////////////////
-// ISR Registry
+// ISR Registry 中断服务注册
 ////////////////////////////////////////////////////////////////////////////////
 Arduino_Mega_ISR_Registry isr_registry;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// APM_RC_Class Instance
+// APM_RC_Class Instance 遥控类的实例
 ////////////////////////////////////////////////////////////////////////////////
 #if CONFIG_APM_HARDWARE == APM_HARDWARE_APM2
     APM_RC_APM2 APM_RC;
@@ -96,10 +96,11 @@ Arduino_Mega_ISR_Registry isr_registry;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Parameters
+// Parameters 参数
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Global parameters are all contained within the 'g' class.
+// 全局参数
 //
 static Parameters      g;
 
@@ -114,15 +115,15 @@ static void update_events(void);
 ////////////////////////////////////////////////////////////////////////////////
 //
 // There are three basic options related to flight sensor selection.
-//
-// - Normal flight mode.  Real sensors are used.
+// 与飞行有关的三个传感器选项
+// - Normal flight mode.  Real sensors are used. 使用真实的传感器
 // - HIL Attitude mode.  Most sensors are disabled, as the HIL
-//   protocol supplies attitude information directly.
-// - HIL Sensors mode.  Synthetic sensors are configured that
-//   supply data from the simulation.
+//   protocol supplies attitude information directly. 大多数传感器被禁用，同时HIL协议直接提供姿态信息
+// - HIL Sensors mode.  Synthetic sensors are configured that 
+//   supply data from the simulation. 合成传感器被配置为从模拟器获得数据
 //
 
-// All GPS access should be through this pointer.
+// All GPS access should be through this pointer. 所有的GPS访问都应通过这个指针
 static GPS         *g_gps;
 
 // flight modes convenience array
@@ -200,14 +201,14 @@ AP_IMU_Shim             imu; // never used
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// GCS selection
+// GCS selection 地面站选择
 ////////////////////////////////////////////////////////////////////////////////
 //
 GCS_MAVLINK	gcs0(Parameters::k_param_streamrates_port0);
 GCS_MAVLINK	gcs3(Parameters::k_param_streamrates_port3);
 
 ////////////////////////////////////////////////////////////////////////////////
-// PITOT selection
+// PITOT selection 空速选择
 ////////////////////////////////////////////////////////////////////////////////
 //
 ModeFilter sonar_mode_filter;
@@ -228,7 +229,7 @@ AP_AnalogSource_Arduino pitot_analog_source(CONFIG_PITOT_SOURCE_ANALOG_PIN);
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
-// Global variables
+// Global variables 全局变量
 ////////////////////////////////////////////////////////////////////////////////
 
 byte    control_mode        = INITIALISING;
@@ -273,13 +274,13 @@ static const char* flight_mode_strings[] = {
 		See libraries/RC_Channel/RC_Channel_aux.h for more information
 */
 
-// Failsafe
+// Failsafe 失效保护
 // --------
 static int 	failsafe;					// track which type of failsafe is being processed
 static bool 	ch3_failsafe;
 static byte    crash_timer;
 
-// Radio
+// Radio 遥控
 // -----
 static uint16_t elevon1_trim  = 1500; 	// TODO: handle in EEProm
 static uint16_t elevon2_trim  = 1500;
@@ -292,11 +293,11 @@ static uint32_t ch3_failsafe_timer = 0;
 
 // for elevons radio_in[CH_ROLL] and radio_in[CH_PITCH] are equivalent aileron and elevator, not left and right elevon
 
-// LED output
+// LED output LED输出
 // ----------
 static bool GPS_light;							// status of the GPS light
 
-// GPS variables
+// GPS variables GPS变量
 // -------------
 static const 	float t7			= 10000000.0;	// used to scale GPS values for EEPROM storage
 static float 	scaleLongUp			= 1;			// used to reverse longitude scaling
@@ -305,7 +306,7 @@ static byte 	ground_start_count	= 5;			// have we achieved first lock and set Ho
 static int     ground_start_avg;					// 5 samples to avg speed for ground start
 static bool	GPS_enabled 	= false;			// used to quit "looking" for gps with auto-detect if none present
 
-// Location & Navigation
+// Location & Navigation 定位与导航
 // ---------------------
 const	float radius_of_earth 	= 6378100;	// meters
 const	float gravity 			= 9.81;		// meters/ sec^2
@@ -321,7 +322,7 @@ static byte	non_nav_command_index;				// active non-nav command memory location
 static byte	nav_command_ID		= NO_COMMAND;	// active nav command ID
 static byte	non_nav_command_ID	= NO_COMMAND;	// active non-nav command ID
 
-// Airspeed
+// Airspeed 空速
 // --------
 static int		airspeed;							// m/s * 100
 static int		airspeed_nudge;  					// m/s * 100 : additional airspeed based on throttle stick position in top 1/2 of range
@@ -330,13 +331,13 @@ static float	airspeed_fbwB;						// m/s * 100
 static long 	energy_error;                       // energy state error (kinetic + potential) for altitude hold
 static long		airspeed_energy_error;              // kinetic portion of energy error
 
-// Location Errors
+// Location Errors 定位误差
 // ---------------
 static long	bearing_error;						// deg * 100 : 0 to 36000
 static long	altitude_error;						// meters * 100 we are off in altitude
 static float	crosstrack_error;					// meters we are off trackline
 
-// Battery Sensors
+// Battery Sensors 电池传感器
 // ---------------
 static float	battery_voltage		= LOW_VOLTAGE * 1.05;		// Battery Voltage of total battery, initialized above threshold for filter
 static float 	battery_voltage1 	= LOW_VOLTAGE * 1.05;		// Battery Voltage of cell 1, initialized above threshold for filter
@@ -347,20 +348,20 @@ static float 	battery_voltage4 	= LOW_VOLTAGE * 1.05;		// Battery Voltage of cel
 static float	current_amps;
 static float	current_total;
 
-// Airspeed Sensors
+// Airspeed Sensors 空速传感器
 // ----------------
 static float   airspeed_raw;                       // Airspeed Sensor - is a float to better handle filtering
 static int     airspeed_pressure;					// airspeed as a pressure value
 
-// Barometer Sensor variables
+// Barometer Sensor variables 气压传感器变量
 // --------------------------
 static unsigned long 	abs_pressure;
 
-// Altitude Sensor variables
+// Altitude Sensor variables 海拔高度传感器变量
 // ----------------------
 static int		sonar_alt;
 
-// flight mode specific
+// flight mode specific 特定飞行模式
 // --------------------
 static bool takeoff_complete    = true;         // Flag for using gps ground course instead of IMU yaw.  Set false when takeoff command processes.
 static bool	land_complete;
@@ -369,7 +370,7 @@ static long	takeoff_altitude;
 static int			landing_pitch;						// pitch for landing set by commands
 static int			takeoff_pitch;
 
-// Loiter management
+// Loiter management 盘旋管理
 // -----------------
 static long 	old_target_bearing;					// deg * 100
 static int		loiter_total; 						// deg : how many times to loiter * 360
@@ -378,18 +379,18 @@ static int		loiter_sum;							// deg : how far we have turned around a waypoint
 static long 	loiter_time;						// millis : when we started LOITER mode
 static int 	loiter_time_max;					// millis : how long to stay in LOITER mode
 
-// these are the values for navigation control functions
+// these are the values for navigation control functions 这些都是用于导航控制功能的变量
 // ----------------------------------------------------
 static long	nav_roll;							// deg * 100 : target roll angle
 static long	nav_pitch;							// deg * 100 : target pitch angle
 static int     throttle_nudge = 0;                 // 0-(throttle_max - throttle_cruise) : throttle nudge in Auto mode using top 1/2 of throttle stick travel
 
-// Waypoints
+// Waypoints 航点
 // ---------
 static long	wp_distance;						// meters - distance between plane and next waypoint
 static long	wp_totalDistance;					// meters - distance between old and next waypoint
 
-// repeating event control
+// repeating event control 重复事件控制
 // -----------------------
 static byte 		event_id; 							// what to do - see defines
 static long 		event_timer; 						// when the event was asked for in ms
@@ -398,13 +399,13 @@ static int 		event_repeat = 0;					// how many times to cycle : -1 (or -2) = for
 static int 		event_value; 						// per command value, such as PWM for servos
 static int 		event_undo_value;					// the value used to cycle events (alternate value to event_value)
 
-// delay command
+// delay command 延迟命令
 // --------------
 static long 	condition_value;						// used in condition commands (eg delay, change alt, etc.)
 static long 	condition_start;
 static int 	condition_rate;
 
-// 3D Location vectors
+// 3D Location vectors 3D定位向量
 // -------------------
 static struct 	Location home;						// home location
 static struct 	Location prev_WP;					// last waypoint
@@ -418,12 +419,12 @@ static long 	offset_altitude;					// used for altitude management between waypoi
 static bool	home_is_set; 						// Flag for if we have g_gps lock and have set the home location
 
 
-// IMU variables
+// IMU variables IMU变量
 // -------------
 static float G_Dt						= 0.02;		// Integration time for the gyros (DCM algorithm)
 
 
-// Performance monitoring
+// Performance monitoring 性能监控
 // ----------------------
 static long 	perf_mon_timer;						// Metric based on accel gain deweighting
 static int 	G_Dt_max = 0;						// Max main loop cycle time in milliseconds
@@ -431,7 +432,7 @@ static int 	gps_fix_count = 0;
 static int		pmTest1 = 0;
 
 
-// System Timers
+// System Timers 系统计时器
 // --------------
 static unsigned long 	fast_loopTimer;				// Time in miliseconds of main control loop
 static unsigned long 	fast_loopTimeStamp;			// Time Stamp when fast loop was complete
@@ -453,7 +454,7 @@ static float 			load;						// % MCU cycles used
 
 AP_Relay relay;
 
-// Camera/Antenna mount tracking and stabilisation stuff
+// Camera/Antenna mount tracking and stabilisation stuff 数码相机/天线架跟踪和稳定
 // --------------------------------------
 #if MOUNT == ENABLED
 AP_Mount camera_mount(g_gps, &dcm);
@@ -461,7 +462,7 @@ AP_Mount camera_mount(g_gps, &dcm);
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Top-level logic
+// Top-level logic 顶层逻辑
 ////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
@@ -471,7 +472,7 @@ void setup() {
 
 void loop()
 {
-	// We want this to execute at 50Hz if possible
+	// We want this to execute at 50Hz if possible 我们希望这部分以50Hz的速度运行
 	// -------------------------------------------
 	if (millis()-fast_loopTimer > 19) {
 		delta_ms_fast_loop	= millis() - fast_loopTimer;
@@ -481,11 +482,11 @@ void loop()
 
 		mainLoop_count++;
 
-		// Execute the fast loop
+		// Execute the fast loop 执行快速循环
 		// ---------------------
 		fast_loop();
 
-		// Execute the medium loop
+		// Execute the medium loop 执行中速循环
 		// -----------------------
 		medium_loop();
 
@@ -510,7 +511,7 @@ void loop()
 	}
 }
 
-// Main loop 50Hz
+// Main loop 50Hz 主循环为50Hz
 static void fast_loop()
 {
 	// This is the fast loop - we want it to execute at 50Hz if possible
@@ -591,7 +592,7 @@ static void medium_loop()
 	camera_mount.update_mount_position();
 #endif
 
-	// This is the start of the medium (10 Hz) loop pieces
+	// This is the start of the medium (10 Hz) loop pieces 中速循环为10Hz
 	// -----------------------------------------
 	switch(medium_loopCounter) {
 
@@ -700,7 +701,7 @@ Serial.println(tempaccel.z, DEC);
 
 static void slow_loop()
 {
-	// This is the slow (3 1/3 Hz) loop pieces
+	// This is the slow (3 1/3 Hz) loop pieces 慢速循环为3又3分之1赫兹
 	//----------------------------------------
 	switch (slow_loopCounter){
 		case 0:
